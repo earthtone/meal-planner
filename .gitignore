@@ -1,0 +1,12 @@
+*.cache*
+*.env*
+*swp*
+*.vim*
+
+dist
+node_modules
+elm-stuff
+
+# add this to project once created
+elm.json
+**/TW.elm
