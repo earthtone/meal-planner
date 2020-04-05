@@ -1,9 +1,10 @@
 module Main exposing (main)
 
 import Browser
+import Helpers
 import Html exposing (Html, a, button, div, form, h3, img, input, label, text)
 import Html.Attributes exposing (alt, class, href, src, type_, value)
-import Html.Events exposing (onInput, onSubmit)
+import Html.Events exposing (onClick, onInput, onSubmit)
 
 
 main =
@@ -17,12 +18,8 @@ type alias Meal =
     }
 
 
-type alias Index =
-    Int
-
-
 type alias Model =
-    { meals : List Meal
+    { meals : List (Maybe Meal)
     , mealNameInput : String
     , mealImageUrlInput : String
     , mealRecipeUrlInput : String
@@ -38,40 +35,12 @@ init =
     }
 
 
-addMeal : Meal -> List Meal -> List Meal
-addMeal meal meals =
-    meals ++ [ meal ]
-
-
-removeMeal : Index -> List Meal -> List Meal
-removeMeal index meals =
-    let
-        before n =
-            List.take n meals
-
-        after n =
-            List.drop (n + 1) meals
-    in
-    before index ++ after index
-
-
-updateMeal : Index -> Meal -> List Meal -> List Meal
-updateMeal index meal meals =
-    let
-        before n =
-            List.take n meals
-
-        after n =
-            List.drop (n + 1) meals
-    in
-    before index ++ [ meal ] ++ after index
-
-
 type Msg
     = AddMeal
     | SetMealName String
     | SetMealImageUrl String
     | SetMealRecipeUrl String
+    | CreateMeal
 
 
 update : Msg -> Model -> Model
@@ -80,11 +49,14 @@ update msg model =
         AddMeal ->
             { model
                 | meals =
-                    addMeal
-                        { name = model.mealNameInput
-                        , imageUrl = model.mealImageUrlInput
-                        , recipeUrl = model.mealRecipeUrlInput
-                        }
+                    Helpers.updateListItem
+                        (List.length model.meals - 1)
+                        (Just
+                            { name = model.mealNameInput
+                            , imageUrl = model.mealImageUrlInput
+                            , recipeUrl = model.mealRecipeUrlInput
+                            }
+                        )
                         model.meals
                 , mealNameInput = ""
                 , mealImageUrlInput = ""
@@ -100,10 +72,13 @@ update msg model =
         SetMealRecipeUrl s ->
             { model | mealRecipeUrlInput = s }
 
+        CreateMeal ->
+            { model | meals = Helpers.addToList Nothing model.meals }
+
 
 addMealView : Model -> Html Msg
 addMealView model =
-    form [ onSubmit AddMeal, class "flex flex-col p-8 mx-auto border shadow-md" ]
+    form [ onSubmit AddMeal, class "flex flex-col p-8 mx-auto bg-white border shadow-md" ]
         [ label
             [ class "flex flex-col my-4" ]
             [ input
@@ -129,18 +104,40 @@ addMealView model =
         ]
 
 
-mealView : Meal -> Html Msg
-mealView meal =
-    div [ class "p-8 mx-auto border shadow-md" ]
+mealDetailsView : Meal -> Html Msg
+mealDetailsView meal =
+    div [ class "p-8 mx-auto bg-white border shadow-md" ]
         [ img [ src meal.imageUrl, alt meal.name ] []
         , h3 [ class "text-2xl" ] [ text meal.name ]
-        , a [ href meal.recipeUrl, class "underline hover:text-gray-700" ] [ text "Recipe" ]
+        , a
+            [ href meal.recipeUrl
+            , class "underline hover:text-gray-700"
+            ]
+            [ text "Recipe" ]
         ]
+
+
+mealCardView : Model -> Maybe Meal -> Html Msg
+mealCardView model meal =
+    case meal of
+        Nothing ->
+            addMealView model
+
+        Just m ->
+            mealDetailsView m
 
 
 view : Model -> Html Msg
 view model =
-    div [ class "flex justify-center w-full pt-3" ]
-        ([ addMealView model ]
-            ++ List.map mealView model.meals
-        )
+    div [ class "flex flex-col w-full pt-3" ]
+        [ div []
+            [ div
+                [ class "p-12 bg-gray-300" ]
+                (List.map (mealCardView model) model.meals)
+            , button
+                [ onClick CreateMeal
+                , class "p-4 m-4 border rounded-full hover:shadow-md"
+                ]
+                [ text "add meal" ]
+            ]
+        ]
